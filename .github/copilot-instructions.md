@@ -24,32 +24,40 @@ This is a Model Context Protocol (MCP) server for manipulating Mockoon configura
 ### Route Tools
 5. **list_routes** - List routes with pagination support (offset, limit) ⚡ *Optimized - 10 routes default*
 6. **get_route** - Get route details with metadata only (no bodies by default) ⚡ *Optimized*
-7. **add_route** - Add a new route to an environment
-8. **update_route** - Update an existing route
-9. **delete_route** - Delete a route from an environment
+7. **find_route** - Find a route by endpoint path and method ⚡ *NEW - Preferred for direct lookup*
+8. **add_route** - Add a new route to an environment
+9. **update_route** - Update an existing route
+10. **delete_route** - Delete a route from an environment
 
 ### Response Tools
-10. **get_response_details** - Get full response body, headers, rules ⚡ *Use only when editing*
-11. **update_response** - Update a route response
+11. **get_response_details** - Get full response body, headers, rules ⚡ *Supports responseIndex*
+12. **update_response** - Update a route response ⚡ *Supports responseIndex*
 
 ### Template & Data Tools
-12. **replace_dates_with_templates** - Replace static dates with Mockoon template syntax
-13. **list_data_buckets** - List data buckets in an environment
+13. **replace_dates_with_templates** - Replace static dates with Mockoon template syntax ⚡ *Supports responseIndex*
+14. **list_data_buckets** - List data buckets in an environment
 
 ## Context Optimization Guidelines
 
 ⚡ **Important**: This server is optimized to reduce LLM context pollution:
 
-- **Discovery Phase**: Use `get_config_summary` → `list_routes` (paginated) → `get_route` (metadata)
-- **Editing Phase**: Use `get_response_details` only when you need full body content
+- **Discovery Phase (by endpoint)**: Use `find_route(endpoint, method)` → get route and response UUIDs directly
+- **Discovery Phase (browsing)**: Use `get_config_summary` → `list_routes` (paginated) → `get_route` (metadata)
+- **Editing Phase**: Use `get_response_details` or action tools with `responseIndex` for quick access
 - **Avoid**: Loading full configs or all routes at once unless necessary
 
-### Tool Usage Pattern:
+### Preferred Tool Usage Pattern (Endpoint-based):
+```
+1. find_route(endpoint="/api/orders", method="GET") → { routeId, responses: [{index: 0, uuid: "..."}] }
+2. replace_dates_with_templates(routeId, responseIndex=0, strategy="offset") → Done!
+```
+
+### Alternative Tool Usage Pattern (Browsing):
 ```
 1. get_config_summary → Understand scope (127 routes, 312 responses)
 2. list_routes(offset=0, limit=10) → Browse first 10 routes
 3. get_route(routeId) → See metadata (bodySize: 1.8KB, templateCount: 3)
-4. get_response_details(routeId, responseId) → Get full body when editing
+4. get_response_details(routeId, responseIndex=0) → Get full body when editing
 ```
 
 See [doc/CONTEXT_OPTIMIZATION_IMPLEMENTATION.md](../doc/CONTEXT_OPTIMIZATION_IMPLEMENTATION.md) for details.

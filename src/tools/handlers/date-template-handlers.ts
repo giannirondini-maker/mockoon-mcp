@@ -8,11 +8,13 @@ import {
   replaceDatesWithTemplates,
   DateStrategy,
 } from '../../utils/date-template.js';
+import { findResponse } from '../../utils/response.js';
 
 export async function handleReplaceDatesWithTemplates(args: {
   filePath: string;
   routeId: string;
-  responseId: string;
+  responseId?: string;
+  responseIndex?: number;
   strategy: DateStrategy;
   variableName?: string;
   offsetDays?: number;
@@ -21,6 +23,7 @@ export async function handleReplaceDatesWithTemplates(args: {
     filePath,
     routeId,
     responseId,
+    responseIndex,
     strategy,
     variableName = 'requestDate',
     offsetDays = 0,
@@ -43,14 +46,14 @@ export async function handleReplaceDatesWithTemplates(args: {
     };
   }
 
-  // Find response
-  const response = route.responses.find(r => r.uuid === responseId);
-  if (!response) {
+  // Find response using helper
+  const { response, error } = findResponse(route.responses, responseId, responseIndex);
+  if (!response || error) {
     return {
       content: [
         {
           type: 'text' as const,
-          text: `Response not found: ${responseId}`,
+          text: error || 'Response not found',
         },
       ],
       isError: true,

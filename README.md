@@ -185,6 +185,35 @@ Get details of a specific route with optimized response metadata.
 }
 ```
 
+### find_route
+
+Find a route by endpoint path and method. Returns route UUID and response list for targeted operations. Supports partial endpoint matching.
+
+**Parameters:**
+
+- `filePath` (string): Path to the Mockoon configuration file
+- `endpoint` (string): Endpoint path to search for (e.g., "/api/users"). Supports partial matching.
+- `method` (string, optional): HTTP method (GET, POST, etc.). If omitted and only one route matches the endpoint, it is returned directly. If multiple routes with different methods match, a disambiguation prompt is returned listing available methods.
+
+**Returns:** Route details with response list including indices, or disambiguation prompt if method is needed.
+
+**Example Response:**
+```json
+{
+  "found": true,
+  "route": {
+    "uuid": "abc-123",
+    "method": "GET",
+    "endpoint": "/api/users",
+    "enabled": true
+  },
+  "responses": [
+    { "index": 0, "uuid": "resp-1", "label": "Success", "statusCode": 200, "default": true },
+    { "index": 1, "uuid": "resp-2", "label": "Error", "statusCode": 500, "default": false }
+  ]
+}
+```
+
 ### add_route
 
 Add a new route to an environment.
@@ -231,7 +260,8 @@ Get full details of a specific response including body, headers, and rules. **Us
 
 - `filePath` (string): Path to the Mockoon configuration file
 - `routeId` (string): Route UUID
-- `responseId` (string): Response UUID
+- `responseId` (string, optional): Response UUID (alternative to responseIndex)
+- `responseIndex` (number, optional): Response index, 0-based (alternative to responseId)
 
 **Returns:** Complete response details including full body content.
 
@@ -244,7 +274,8 @@ Update a route response.
 - `filePath` (string): Path to the Mockoon configuration file
 - `environmentId` (string, optional): Environment UUID or name
 - `routeId` (string): Route UUID
-- `responseId` (string): Response UUID
+- `responseId` (string, optional): Response UUID (alternative to responseIndex)
+- `responseIndex` (number, optional): Response index, 0-based (alternative to responseId)
 - `body` (string, optional): Response body
 - `statusCode` (number, optional): HTTP status code
 - `label` (string, optional): Response label
@@ -257,7 +288,8 @@ Find static dates in a response body and replace them with Mockoon template synt
 
 - `filePath` (string): Path to the Mockoon configuration file
 - `routeId` (string): Route UUID
-- `responseId` (string): Response UUID
+- `responseId` (string, optional): Response UUID (alternative to responseIndex)
+- `responseIndex` (number, optional): Response index, 0-based (alternative to responseId)
 - `strategy` (string): Date replacement strategy - `relative` (dates relative to request), `offset` (dates offset from now), or `manual` (custom variable)
 - `variableName` (string, optional): Template variable name (default: requestDate)
 - `offsetDays` (number, optional): Days to offset dates (for offset strategy)
@@ -267,6 +299,16 @@ Find static dates in a response body and replace them with Mockoon template synt
 - **relative**: Generates templates like `{{dateTimeShift (bodyRaw 'requestDate') days=0}}` - dates relative to request body values
 - **offset**: Generates templates like `{{date (dateTimeShift (now) days=5) 'yyyy-MM-dd'}}` - dates offset from current time
 - **manual**: Generates templates like `{{customVariable}}` - custom template variable names
+
+**Example Usage:**
+
+Once you have connected this MCP server to Claude Desktop or another MCP client, you can use natural language commands like:
+
+```
+For file '/path/to/mockoon-config.json', use just MCP tools to find the desired route/s and replace dates.
+Replace the static dates in the first and second responses of the route `/api/users` with method `GET`.
+For the first response I want to use the offset strategy, adding one week from today, while for the second response, I want to use the relative strategy, using this variable name as placeholder `params.param_array.0.my_variable`.
+```
 
 ### list_data_buckets
 

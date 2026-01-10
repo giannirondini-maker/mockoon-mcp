@@ -32,6 +32,29 @@ export const tools = [
     },
   },
   {
+    name: 'find_route',
+    description:
+      'Find a route by endpoint path and method. Returns route UUID and response list for targeted operations. Supports partial endpoint matching.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath: {
+          type: 'string',
+          description: 'Path to the Mockoon configuration file',
+        },
+        endpoint: {
+          type: 'string',
+          description: 'Endpoint path to search for (e.g., "/api/users"). Supports partial matching.',
+        },
+        method: {
+          type: 'string',
+          description: 'HTTP method (GET, POST, etc.). Optional - if omitted and multiple methods exist for the endpoint, returns disambiguation prompt.',
+        },
+      },
+      required: ['filePath', 'endpoint'],
+    },
+  },
+  {
     name: 'list_environments',
     description: 'List all environments in a Mockoon configuration file',
     inputSchema: {
@@ -225,7 +248,8 @@ export const tools = [
   },
   {
     name: 'get_response_details',
-    description: 'Get full details of a specific response including body, headers, and rules',
+    description:
+      'Get full details of a specific response including body, headers, and rules. Use either responseId (UUID) or responseIndex (0-based position).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -239,15 +263,20 @@ export const tools = [
         },
         responseId: {
           type: 'string',
-          description: 'Response UUID',
+          description: 'Response UUID (alternative to responseIndex)',
+        },
+        responseIndex: {
+          type: 'number',
+          description: 'Response index (0-based position in the responses array, alternative to responseId)',
         },
       },
-      required: ['filePath', 'routeId', 'responseId'],
+      required: ['filePath', 'routeId'],
     },
   },
   {
     name: 'update_response',
-    description: 'Update a route response',
+    description:
+      'Update a route response. Use either responseId (UUID) or responseIndex (0-based position).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -266,7 +295,11 @@ export const tools = [
         },
         responseId: {
           type: 'string',
-          description: 'Response UUID',
+          description: 'Response UUID (alternative to responseIndex)',
+        },
+        responseIndex: {
+          type: 'number',
+          description: 'Response index (0-based position in the responses array, alternative to responseId)',
         },
         body: {
           type: 'string',
@@ -281,7 +314,7 @@ export const tools = [
           description: 'Response label',
         },
       },
-      required: ['filePath', 'routeId', 'responseId'],
+      required: ['filePath', 'routeId'],
     },
   },
   {
@@ -306,7 +339,7 @@ export const tools = [
   {
     name: 'replace_dates_with_templates',
     description:
-      'Find static dates in a response body and replace them with Mockoon template syntax. Supports three strategies: relative (dates relative to request parameters), offset (dates offset from current time), or manual (custom template variables).',
+      'Find static dates in a response body and replace them with Mockoon template syntax. Supports three strategies: relative (dates relative to request parameters), offset (dates offset from current time), or manual (custom template variables). Use either responseId (UUID) or responseIndex (0-based position).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -320,7 +353,11 @@ export const tools = [
         },
         responseId: {
           type: 'string',
-          description: 'Response UUID',
+          description: 'Response UUID (alternative to responseIndex)',
+        },
+        responseIndex: {
+          type: 'number',
+          description: 'Response index (0-based position in the responses array, alternative to responseId)',
         },
         strategy: {
           type: 'string',
@@ -338,7 +375,7 @@ export const tools = [
           description: 'Number of days to offset dates (used with offset strategy, default: 0)',
         },
       },
-      required: ['filePath', 'routeId', 'responseId', 'strategy'],
+      required: ['filePath', 'routeId', 'strategy'],
     },
   },
 ];
