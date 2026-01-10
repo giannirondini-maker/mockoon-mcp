@@ -3,17 +3,20 @@
  */
 
 import { readMockoonConfig, writeMockoonConfig, getBodySize } from '../../utils/config.js';
+import { findResponse } from '../../utils/response.js';
 
 export async function handleUpdateResponse(args: {
   filePath: string;
   environmentId?: string;
   routeId: string;
-  responseId: string;
+  responseId?: string;
+  responseIndex?: number;
   body?: string;
   statusCode?: number;
   label?: string;
 }) {
-  const { filePath, environmentId, routeId, responseId, body, statusCode, label } = args;
+  const { filePath, environmentId, routeId, responseId, responseIndex, body, statusCode, label } =
+    args;
 
   const config = await readMockoonConfig(filePath);
 
@@ -43,14 +46,14 @@ export async function handleUpdateResponse(args: {
     };
   }
 
-  const response = route.responses.find(r => r.uuid === responseId);
+  const { response, error } = findResponse(route.responses, responseId, responseIndex);
 
-  if (!response) {
+  if (!response || error) {
     return {
       content: [
         {
           type: 'text' as const,
-          text: `Response not found: ${responseId}`,
+          text: error || 'Response not found',
         },
       ],
       isError: true,
@@ -76,9 +79,10 @@ export async function handleUpdateResponse(args: {
 export async function handleGetResponseDetails(args: {
   filePath: string;
   routeId: string;
-  responseId: string;
+  responseId?: string;
+  responseIndex?: number;
 }) {
-  const { filePath, routeId, responseId } = args;
+  const { filePath, routeId, responseId, responseIndex } = args;
   const config = await readMockoonConfig(filePath);
 
   const route = config.routes.find(r => r.uuid === routeId);
@@ -95,14 +99,14 @@ export async function handleGetResponseDetails(args: {
     };
   }
 
-  const response = route.responses.find(r => r.uuid === responseId);
+  const { response, error } = findResponse(route.responses, responseId, responseIndex);
 
-  if (!response) {
+  if (!response || error) {
     return {
       content: [
         {
           type: 'text' as const,
-          text: `Response not found: ${responseId}`,
+          text: error || 'Response not found',
         },
       ],
       isError: true,

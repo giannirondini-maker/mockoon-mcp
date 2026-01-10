@@ -55,10 +55,10 @@ src/
 
 Organized by functional area:
 
-- **config-handlers**: Read configuration files
+- **config-handlers**: Read configuration files, get config summaries
 - **environment-handlers**: List and get environments
-- **route-handlers**: CRUD operations for routes
-- **response-handlers**: Update route responses
+- **route-handlers**: CRUD operations for routes, find route by endpoint
+- **response-handlers**: Update route responses, get response details
 - **date-template-handlers**: Replace static dates with Mockoon templates
 - **databucket-handlers**: List data buckets
 
@@ -87,6 +87,17 @@ npm run prettier   # Format code with Prettier
 
 The server implements several optimizations to reduce LLM context pollution:
 
+### Direct Endpoint Lookup
+- New `find_route` tool for direct route discovery by endpoint path and method
+- Returns route UUID and response list with indices
+- Supports partial endpoint matching
+- Eliminates need to paginate through routes for common operations
+
+### Response Index Support
+- Tools `get_response_details`, `update_response`, and `replace_dates_with_templates` support `responseIndex`
+- Use 0-based index as alternative to UUID
+- Enables quick access: `find_route` → `replace_dates_with_templates(responseIndex=0)`
+
 ### Pagination System
 - `list_routes` supports `offset` and `limit` parameters
 - Default page size: 10 routes
@@ -100,12 +111,12 @@ The server implements several optimizations to reduce LLM context pollution:
 - Reduces context by ~85% per route
 
 ### On-Demand Body Loading
-- New `get_response_details` tool for explicit body retrieval
+- `get_response_details` tool for explicit body retrieval
 - Separates route structure exploration from body editing
 - Only fetches full bodies when necessary
 
 ### Quick Summaries
-- New `get_config_summary` tool for config overview
+- `get_config_summary` tool for config overview
 - Returns aggregate stats without loading full config
 - Helps LLM decide which detailed tools to call
 - Reduces initial context by ~99%

@@ -15,6 +15,7 @@ import {
   handleAddRoute,
   handleUpdateRoute,
   handleDeleteRoute,
+  handleFindRoute,
   handleUpdateResponse,
   handleGetResponseDetails,
   handleListDataBuckets,
@@ -115,13 +116,23 @@ export function createServer(): Server {
             }
           );
 
+        case 'find_route':
+          return await handleFindRoute(
+            args as {
+              filePath: string;
+              endpoint: string;
+              method?: string;
+            }
+          );
+
         case 'update_response':
           return await handleUpdateResponse(
             args as {
               filePath: string;
               environmentId?: string;
               routeId: string;
-              responseId: string;
+              responseId?: string;
+              responseIndex?: number;
               body?: string;
               statusCode?: number;
               label?: string;
@@ -133,7 +144,8 @@ export function createServer(): Server {
             args as {
               filePath: string;
               routeId: string;
-              responseId: string;
+              responseId?: string;
+              responseIndex?: number;
             }
           );
 
@@ -145,7 +157,8 @@ export function createServer(): Server {
             args as {
               filePath: string;
               routeId: string;
-              responseId: string;
+              responseId?: string;
+              responseIndex?: number;
               strategy: 'relative' | 'offset' | 'manual';
               variableName?: string;
               offsetDays?: number;

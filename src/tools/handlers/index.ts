@@ -10,6 +10,7 @@ export {
   handleAddRoute,
   handleUpdateRoute,
   handleDeleteRoute,
+  handleFindRoute,
 } from './route-handlers.js';
 export { handleUpdateResponse, handleGetResponseDetails } from './response-handlers.js';
 export { handleListDataBuckets } from './databucket-handlers.js';
