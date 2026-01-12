@@ -339,7 +339,7 @@ export const tools = [
   {
     name: 'replace_dates_with_templates',
     description:
-      'Find static dates in a response body and replace them with Mockoon template syntax. Supports three strategies: relative (dates relative to request parameters), offset (dates offset from current time), or manual (custom template variables). Use either responseId (UUID) or responseIndex (0-based position).',
+      'Find static dates in a response body and replace them with Mockoon template syntax. Supports three strategies: relative (dates relative to request parameters), offset (dates offset from current time), or manual (custom template variables). Use either responseId (UUID) or responseIndex (0-based position). Can be called MULTIPLE times per response to apply different strategies to different fields using fieldPattern or fieldNames. Already-templated dates are automatically skipped (idempotent).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -373,6 +373,17 @@ export const tools = [
         offsetDays: {
           type: 'number',
           description: 'Number of days to offset dates (used with offset strategy, default: 0)',
+        },
+        fieldPattern: {
+          type: 'string',
+          description:
+            'Regex pattern to filter which date fields to process. Only fields with names matching this pattern will be replaced. Example: "pnr_.*" matches pnr_date, pnr_creation_date. Use for multi-strategy scenarios where different fields need different strategies.',
+        },
+        fieldNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Explicit list of field names to process. Only these exact field names will have their dates replaced. Example: ["order_date", "ship_date"]. Alternative to fieldPattern for precise targeting.',
         },
       },
       required: ['filePath', 'routeId', 'strategy'],
