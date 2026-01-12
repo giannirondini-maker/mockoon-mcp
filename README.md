@@ -293,12 +293,249 @@ Find static dates in a response body and replace them with Mockoon template synt
 - `strategy` (string): Date replacement strategy - `relative` (dates relative to request), `offset` (dates offset from now), or `manual` (custom variable)
 - `variableName` (string, optional): Template variable name (default: requestDate)
 - `offsetDays` (number, optional): Days to offset dates (for offset strategy)
+- `fieldPattern` (string, optional): Regex pattern to filter which fields to process (e.g., `pnr_.*` to only process fields starting with "pnr_")
+- `fieldNames` (array of strings, optional): Explicit list of field names to process (e.g., `["departure_date", "arrival_date"]`)
 
 **Strategies:**
 
 - **relative**: Generates templates like `{{dateTimeShift (bodyRaw 'requestDate') days=0}}` - dates relative to request body values
 - **offset**: Generates templates like `{{date (dateTimeShift (now) days=5) 'yyyy-MM-dd'}}` - dates offset from current time
 - **manual**: Generates templates like `{{customVariable}}` - custom template variable names
+
+**Field Targeting:**
+
+When you need different strategies for different date fields in the same response, use `fieldPattern` or `fieldNames` to target specific fields:
+
+```javascript
+// Replace only pnr_creation_date fields with offset strategy
+replace_dates_with_templates({
+  filePath: "config.json",
+  routeId: "route-123",
+  responseIndex: 0,
+  strategy: "offset",
+  offsetDays: 7,
+  fieldPattern: "pnr_creation_date"  // Or use fieldNames: ["pnr_creation_date"]
+})
+
+// Then replace departure dates with relative strategy
+replace_dates_with_templates({
+  filePath: "config.json",
+  routeId: "route-123",
+  responseIndex: 0,
+  strategy: "relative",
+  variableName: "params.bookingDate",
+  fieldPattern: "departure_.*"  // Matches departure_timestamp, departure_date, etc.
+})
+```
+
+---
+
+## Complex Date Replacement Workflows
+
+This section explains how to handle complex scenarios involving multiple date fields and different replacement strategies. **This is critical for avoiding file corruption** - always use `replace_dates_with_templates` for date operations, never `update_response` with manual JSON edits.
+
+### Multi-Strategy Date Replacement
+
+When you need to replace dates with different strategies in the same response:
+
+1. **Locate the route**: Use `find_route` to get routeId and response indices
+2. **Sequential replacement**: Call `replace_dates_with_templates` multiple times
+3. **Target specific fields**: Use `fieldPattern` or `fieldNames` to control which dates are replaced
+
+#### Example A: Single Response, Multiple Fields, Different Strategies
+
+**Scenario**: A booking response has `pnr_creation_date` (should be offset from today) and `departure_timestamp` (should be relative to request parameter).
+
+```javascript
+// Step 1: Find the route
+find_route({
+  filePath: "/path/to/config.json",
+  endpoint: "api/bookings",
+  method: "POST"
+})
+// Returns: { routeId: "abc-123", responses: [{ index: 0, uuid: "..." }] }
+
+// Step 2: Replace pnr_creation_date with offset strategy (+7 days)
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "abc-123",
+  responseIndex: 0,
+  strategy: "offset",
+  offsetDays: 7,
+  fieldPattern: "pnr_creation_date"
+})
+
+// Step 3: Replace departure_timestamp with relative strategy
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "abc-123",
+  responseIndex: 0,
+  strategy: "relative",
+  variableName: "params.departure_date",
+  fieldPattern: "departure_.*"
+})
+```
+
+#### Example B: Multiple Responses, Same Fields, Different Strategies
+
+**Scenario**: A route has two responses (success and alternate). Both have date fields but need different templating.
+
+```javascript
+// Step 1: Find the route
+find_route({
+  filePath: "/path/to/config.json",
+  endpoint: "api/orders",
+  method: "GET"
+})
+// Returns: { routeId: "xyz-789", responses: [{ index: 0, ... }, { index: 1, ... }] }
+
+// Step 2: Process first response (index 0) - offset dates by 14 days
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "xyz-789",
+  responseIndex: 0,
+  strategy: "offset",
+  offsetDays: 14
+})
+
+// Step 3: Process second response (index 1) - relative to request
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "xyz-789",
+  responseIndex: 1,
+  strategy: "relative",
+  variableName: "params.order_date"
+})
+```
+
+#### Example C: Multiple Responses, Multiple Fields, Mixed Strategies
+
+**Scenario**: Complex booking API with two responses, each needing different strategies for different fields.
+
+```javascript
+// Step 1: Find the route
+find_route({
+  filePath: "/path/to/config.json",
+  endpoint: "dypapi/dp/dp_bookings_enriched",
+  method: "POST"
+})
+
+// Step 2: First response - pnr_creation_date with offset (+7 days)
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "route-uuid",
+  responseIndex: 0,
+  strategy: "offset",
+  offsetDays: 7,
+  fieldPattern: "pnr_creation_date"
+})
+
+// Step 3: First response - departure_timestamp with relative
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "route-uuid",
+  responseIndex: 0,
+  strategy: "relative",
+  variableName: "params.param_array.0.bookingdate",
+  fieldPattern: "departure_timestamp.*"
+})
+
+// Step 4: Second response - departure_timestamp with offset (+7 days)
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "route-uuid",
+  responseIndex: 1,
+  strategy: "offset",
+  offsetDays: 7,
+  fieldPattern: "departure_timestamp.*"
+})
+
+// Step 5: Second response - pnr_creation_date with relative
+replace_dates_with_templates({
+  filePath: "/path/to/config.json",
+  routeId: "route-uuid",
+  responseIndex: 1,
+  strategy: "relative",
+  variableName: "params.param_array.0.startDate",
+  fieldPattern: "pnr_creation_date"
+})
+```
+
+### Using responseIndex for Direct Targeting
+
+The `responseIndex` parameter allows you to target responses by their position (0-based) instead of UUID:
+
+| Parameter | Use Case |
+|-----------|----------|
+| `responseIndex: 0` | First response in the route |
+| `responseIndex: 1` | Second response in the route |
+| `responseId: "uuid-..."` | Target by specific UUID |
+
+**Preferred workflow with responseIndex:**
+```
+1. find_route(endpoint, method) → Get routeId and response list with indices
+2. replace_dates_with_templates(routeId, responseIndex=0, ...) → Process first response
+3. replace_dates_with_templates(routeId, responseIndex=1, ...) → Process second response
+```
+
+### Idempotency and Skipping Already-Templated Dates
+
+The tool is **idempotent** - it automatically detects and skips dates that have already been replaced with templates. This means:
+
+- ✅ You can safely call the tool multiple times
+- ✅ Already-templated fields are reported as "skipped"
+- ✅ The tool returns statistics showing replaced vs skipped counts
+- ✅ No risk of corrupting existing templates
+
+**Example output with skipped dates:**
+```json
+{
+  "success": true,
+  "replacementsCount": 3,
+  "skippedCount": 2,
+  "details": [
+    { "field": "order_date", "status": "replaced", "template": "{{date ...}}" },
+    { "field": "created_at", "status": "skipped", "reason": "already templated" }
+  ]
+}
+```
+
+### ⚠️ Important: What NOT to Do
+
+**NEVER** use `update_response` for date replacement operations. This can corrupt the Mockoon file structure:
+
+```javascript
+// ❌ WRONG - DO NOT DO THIS
+update_response({
+  filePath: "config.json",
+  routeId: "route-123",
+  responseIndex: 0,
+  body: '{"date": "{{date (now) \'yyyy-MM-dd\'}}"}' // Manual JSON editing
+})
+
+// ✅ CORRECT - Always use the specialized tool
+replace_dates_with_templates({
+  filePath: "config.json",
+  routeId: "route-123",
+  responseIndex: 0,
+  strategy: "offset",
+  offsetDays: 0
+})
+```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "No date patterns found" | Check that the response body contains valid ISO 8601 dates (e.g., `2024-01-15` or `2024-01-15T10:30:00Z`) |
+| Field not being replaced | Use `fieldPattern` with a regex that matches the field name, or specify exact names with `fieldNames` |
+| Wrong dates replaced | Be more specific with `fieldPattern` - use anchors like `^pnr_` for "starts with" |
+| Template syntax errors | Verify the `variableName` matches the actual request body structure |
+| Multiple strategies needed | Call the tool multiple times, once per strategy, targeting different fields |
+
+See [doc/EXAMPLES_DATE_REPLACEMENT.md](doc/EXAMPLES_DATE_REPLACEMENT.md) for more detailed examples.
+
+---
 
 **Example Usage:**
 

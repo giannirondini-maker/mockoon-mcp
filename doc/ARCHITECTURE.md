@@ -128,7 +128,44 @@ The `config.ts` module provides:
 - `hasTemplating()`: Mockoon template detection
 - `countTemplates()`: Template expression counting
 
-See [CONTEXT_OPTIMIZATION_IMPLEMENTATION.md](CONTEXT_OPTIMIZATION_IMPLEMENTATION.md) for detailed metrics.
+The `date-template.ts` module provides:
+- `findDatePatterns()`: ISO 8601 date detection with field filtering
+- `replaceDatesWithTemplates()`: Template generation with detailed results
+- `isAlreadyTemplated()`: Template detection for idempotency
+- `matchesFieldFilter()`: Field name pattern matching
+
+
+## Date Template Replacement Architecture
+
+The `replace_dates_with_templates` tool implements several advanced features:
+
+### Field-Specific Targeting
+- `fieldPattern`: Regex pattern to match specific field names
+- `fieldNames`: Explicit list of field names to process
+- Enables multi-strategy workflows where different fields need different strategies
+
+### Idempotency
+- Automatically detects already-templated values (containing `{{...}}`)
+- Skips templated values to prevent corruption
+- Returns statistics: `replacementsCount` and `skippedCount`
+- Safe to call multiple times
+
+### Validation & Error Handling
+- Pre-flight validation of parameters and JSON structure
+- Post-modification validation ensures valid JSON output
+- Automatic rollback on write failures
+- Detailed error messages with recovery suggestions
+
+### Multi-Strategy Workflow
+The recommended workflow for complex date replacement:
+```
+1. find_route(endpoint, method) → Get routeId and responseIndex
+2. replace_dates_with_templates(responseIndex=0, strategy=A, fieldPattern=X)
+3. replace_dates_with_templates(responseIndex=0, strategy=B, fieldPattern=Y)
+4. Repeat for additional responses as needed
+```
+
+See [EXAMPLES_DATE_REPLACEMENT.md](EXAMPLES_DATE_REPLACEMENT.md) for detailed examples.
 
 ## Benefits of This Structure
 
@@ -139,3 +176,4 @@ See [CONTEXT_OPTIMIZATION_IMPLEMENTATION.md](CONTEXT_OPTIMIZATION_IMPLEMENTATION
 5. **Type Safety**: Centralized types prevent duplication and inconsistencies
 6. **Code Quality**: ESLint catches common issues during development
 7. **Context Efficiency**: Optimized tools reduce LLM context usage by 90%+
+8. **Idempotency**: Date replacement is safe to repeat without data corruption
